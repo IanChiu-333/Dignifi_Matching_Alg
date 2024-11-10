@@ -1,26 +1,41 @@
-//This needs to be updated to use our firebase database and its format
-//Ideally we would get a userId and return a list of parameters for that user(eligibilities)
+const admin = require('firebase-admin');
+const functions = require('firebase-functions');
 
-exports.getUser = functions.https.onRequest(async (req, res) => {
-    try {
-      const userId = req.query.id;
-      const userSnapshot = await db.collection("users").doc(userId).get();
-      if (!userSnapshot.exists) {
-        res.status(404).send("User not found");
-        return;
-      }
-      res.status(200).json(userSnapshot.data());
-    } catch (error) {
-      res.status(500).send("Error retrieving user: " + error);
-    }
+// Initialize Firebase Admin SDK
+admin.initializeApp({
+  credential: admin.credential.applicationDefault(),
+  databaseURL: 'https://<your-database-name>.firebaseio.com'
 });
 
-exports.getProviders = functions.https.onRequest(async (req, res) => {
-    try {
-        //Some code to return a JSON file of providers and their attributes
-    } catch (error) {
-      res.status(500).send("Error retrieving database: " + error);
+const db = admin.firestore();
+
+// Function to retrieve a user document
+exports.getUser = functions.https.onRequest(async (req, res) => {
+  try {
+    const userId = req.query.id;
+    const userSnapshot = await db.collection("users").doc(userId).get();
+    if (!userSnapshot.exists) {
+      res.status(404).send("User not found");
+      return;
     }
+    res.status(200).json(userSnapshot.data());
+  } catch (error) {
+    res.status(500).send("Error retrieving user: " + error);
+  }
+});
+
+// Function to retrieve provider documents
+exports.getProviders = functions.https.onRequest(async (req, res) => {
+  try {
+    const providersSnapshot = await db.collection("providers").get();
+    const providers = [];
+    providersSnapshot.forEach(doc => {
+      providers.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json(providers);
+  } catch (error) {
+    res.status(500).send("Error retrieving providers: " + error);
+  }
 });
   
 
@@ -51,34 +66,62 @@ exports.runMatchingAlgorithm = functions.https.onRequest(async (req, res) => {
   }
 });
 
-//Find Matches function - takes in a list of userTags and a JSON file of providers
-//Returns a JSON file of providers that contain userTags
-function findMatches(userTags, providers) {
-    let matches = {};
-
-    providers.forEach(provider => {
-        let matchingTags = provider.tags.filter(tag => userTags.includes(tag));
-        if (matchingTags.length > 0) {
-        matches[provider.name] = matchingTags;
+//Finds matches by accepting two dictionary objects for user and provider attributes
+function findMatches(user, providers) {
+    let matches = new Object();
+    let invalids = [];
+    
+    //Not a fan of this triple for loop - think of something to make more efficient
+    //Might need some input on this, currently one loop to key through elig, cat, and feat in user
+    //One loop to key through each provider in the dictionary
+    //Final loop to look through each true or false attribute
+    for (const key in user) {
+        if (key == "eligibilities") {
+            for (let i=0; i < providers.length; i++) {
+                if (eligibiiltyMatch(user[key], providers[i][key])) {
+                    matches[providers[i]["name"]] = user[key];
+                } else {
+                    invalids.push(providers[i]["name"])
+                }
+            }
         }
-    });
+        if (key == "features" || key == "categories") {
+            for (let i=0; i < providers.length; i++) {
+                if (!invalids.includes(providers[i]["name"])) {
+                    const providerName = providers[i]["name"];
+                    const match = features_and_categories_match(user[key], providers[i][key]);
 
+                    if (matches[providerName]) {
+                        matches[providerName] = { ...matches[providerName], ...match };
+                    } else {
+                        matches[providerName] = match;
+                    }
+                }
+            }
+        }
+    }   
     return matches;
 }
 
-
-//For local alg testing
-function main() {
-    const userTags = ["tag1", "tag2", "tag3"];
-    const providers = [
-        { name: "Provider1", tags: ["tag1", "tag4"] },
-        { name: "Provider2", tags: ["tag2", "tag5"] },
-        { name: "Provider3", tags: ["tag3", "tag6"] },
-        { name: "Provider4", tags: ["tag7", "tag8"] }
-    ];
-
-    const matches = findMatches(userTags, providers);
-    console.log(matches);
+//Finds matching eligibilities - only returns exact matches BOOLEAN
+function eligibiiltyMatch(userEligibilities, providerEligibilities) {
+    for (const key in userEligibilities) {
+        if (userEligibilities[key] !== providerEligibilities[key]) {
+            return false;
+        }
+    }
+    return true;
 }
 
-main();
+//Finds features and category matches - Just returns the matching ones DICT
+function features_and_categories_match(user_f_or_c, provider_f_or_c) {
+    let matches = {};
+
+    for (const key in user_f_or_c) {
+        if (user_f_or_c[key] === provider_f_or_c[key]) {
+            matches[key] = user_f_or_c[key];
+        }
+    }
+
+    return matches;
+}
