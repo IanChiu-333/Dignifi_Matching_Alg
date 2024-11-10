@@ -1,9 +1,12 @@
-//Finds matches by accepting two JSON objects for user and provider attributes
+//Finds matches by accepting two dictionary objects for user and provider attributes
 function findMatches(user, providers) {
     let matches = new Object();
     let invalids = [];
     
     //Not a fan of this triple for loop - think of something to make more efficient
+    //Might need some input on this, currently one loop to key through elig, cat, and feat in user
+    //One loop to key through each provider in the dictionary
+    //Final loop to look through each true or false attribute
     for (const key in user) {
         if (key == "eligibilities") {
             for (let i=0; i < providers.length; i++) {
