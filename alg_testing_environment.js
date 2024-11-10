@@ -32,7 +32,7 @@ function findMatches(user, providers) {
     return matches;
 }
 
-//Finds matching eligibilities - only returns exact matches
+//Finds matching eligibilities - only returns exact matches BOOLEAN
 function eligibiiltyMatch(userEligibilities, providerEligibilities) {
     for (const key in userEligibilities) {
         if (userEligibilities[key] !== providerEligibilities[key]) {
@@ -42,7 +42,7 @@ function eligibiiltyMatch(userEligibilities, providerEligibilities) {
     return true;
 }
 
-//Finds features and category matches - Just returns the matching ones
+//Finds features and category matches - Just returns the matching ones DICT
 function features_and_categories_match(user_f_or_c, provider_f_or_c) {
     let matches = {};
 
