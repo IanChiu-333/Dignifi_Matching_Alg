@@ -1,105 +1,84 @@
-const admin = require('firebase-admin');
-const functions = require('firebase-functions');
+const db = require('./firebase'); // Import the initialized Firestore instance
 
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.applicationDefault(),
-  databaseURL: 'https://<your-database-name>.firebaseio.com'
-});
-
-const db = admin.firestore();
-
-// Function to retrieve a user document
-exports.getUser = functions.https.onRequest(async (req, res) => {
+async function getProviders() {
   try {
-    const userId = req.query.id;
-    const userSnapshot = await db.collection("users").doc(userId).get();
-    if (!userSnapshot.exists) {
-      res.status(404).send("User not found");
-      return;
-    }
-    res.status(200).json(userSnapshot.data());
-  } catch (error) {
-    res.status(500).send("Error retrieving user: " + error);
-  }
-});
-
-// Function to retrieve provider documents
-exports.getProviders = functions.https.onRequest(async (req, res) => {
-  try {
-    const providersSnapshot = await db.collection("providers").get();
+    const providersSnapshot = await db.collection('providers').get();
     const providers = [];
     providersSnapshot.forEach(doc => {
       providers.push({ id: doc.id, ...doc.data() });
     });
-    res.status(200).json(providers);
+    return providers;
   } catch (error) {
-    res.status(500).send("Error retrieving providers: " + error);
+    console.error('Error retrieving providers:', error);
+    throw error;
   }
-});
-  
+}
 
-
-exports.runMatchingAlgorithm = functions.https.onRequest(async (req, res) => {
+async function getUser(userId) {
   try {
-    // Access tags or other data sent from the frontend via req.body
-    const { userId, tags } = req.body;
-
-    // Example matching algorithm using Firestore data
-    const matches = {};
-    const usersSnapshot = await db.collection("users").get();
-
-    usersSnapshot.forEach((doc) => {
-      const userData = doc.data();
-      // Replace with your matching logic based on `tags` or other criteria
-      const score = findMatches(userData.tags, tags);
-      if (score > 0.5) {  // Example threshold for a "good match"
-        matches.push({ id: doc.id, ...userData, score });
-      }
-    });
-
-    // Send the matches back to the frontend
-    res.status(200).json(matches);
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error('User not found');
+    }
+    return { id: userDoc.id, ...userDoc.data() };
   } catch (error) {
-    console.error("Error running matching algorithm:", error);
-    res.status(500).send("Error running matching algorithm");
+    console.error('Error retrieving user:', error);
+    throw error;
   }
-});
+}
+
+(async () => {
+  try {
+    //Link this to an input on the front end!
+    const userId = '';
+    const user = await getUser(userId);
+    const providers = await getProviders();
+    const matches = findMatches(user, providers);
+    feature_sort(matches);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+})();
 
 //Finds matches by accepting two dictionary objects for user and provider attributes
 function findMatches(user, providers) {
-    let matches = new Object();
-    let invalids = [];
-    
-    //Not a fan of this triple for loop - think of something to make more efficient
-    //Might need some input on this, currently one loop to key through elig, cat, and feat in user
-    //One loop to key through each provider in the dictionary
-    //Final loop to look through each true or false attribute
-    for (const key in user) {
-        if (key == "eligibilities") {
-            for (let i=0; i < providers.length; i++) {
-                if (eligibiiltyMatch(user[key], providers[i][key])) {
-                    matches[providers[i]["name"]] = user[key];
-                } else {
-                    invalids.push(providers[i]["name"])
-                }
-            }
-        }
-        if (key == "features" || key == "categories") {
-            for (let i=0; i < providers.length; i++) {
-                if (!invalids.includes(providers[i]["name"])) {
-                    const providerName = providers[i]["name"];
-                    const match = features_and_categories_match(user[key], providers[i][key]);
+    let matches = {};
 
-                    if (matches[providerName]) {
-                        matches[providerName] = { ...matches[providerName], ...match };
-                    } else {
-                        matches[providerName] = match;
-                    }
-                }
-            }
+    // Initialize matches with each provider having nested dictionaries
+    providers.forEach(provider => {
+        matches[provider.name] = {
+            eligibilities: {},
+            categories: {},
+            features: {}
+        };
+    });
+
+    let invalids = [];
+
+    // Iterate through each provider
+    providers.forEach(provider => {
+        const providerName = provider.name;
+
+        // Check eligibilities
+        if (eligibiiltyMatch(user.eligibilities, provider.eligibilities)) {
+            matches[providerName].eligibilities = user.eligibilities;
+        } else {
+            invalids.push(providerName);
         }
-    }   
+
+        // Check features and categories if the provider is not invalid
+        if (!invalids.includes(providerName)) {
+            matches[providerName].features = features_and_categories_match(user.features, provider.features);
+            matches[providerName].categories = features_and_categories_match(user.categories, provider.categories);
+        }
+    });
+
+    for (const providerName in matches) {
+        if (Object.keys(matches[providerName].eligibilities).length === 0) {
+            delete matches[providerName];
+        }
+    }
+
     return matches;
 }
 
@@ -124,4 +103,24 @@ function features_and_categories_match(user_f_or_c, provider_f_or_c) {
     }
 
     return matches;
+}
+
+//Takes in matches and sorts by features - most are first, RETURNS ARRAY
+function feature_sort(matches) {
+    let order = [];
+    const temp_matches = {...matches};
+    while (Object.keys(temp_matches).length > 0) {
+        let name = "";
+        let max = 0;
+        for (const key in temp_matches) {
+            if (max < Object.keys(temp_matches[key].features).length) {
+                max = Object.keys(temp_matches[key].features).length;
+                name = key;
+            }
+        }
+        order.push(name);
+        delete temp_matches[name];
+    }
+
+    return order;
 }
