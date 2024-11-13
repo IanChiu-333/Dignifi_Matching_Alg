@@ -1,37 +1,42 @@
 //Finds matches by accepting two dictionary objects for user and provider attributes
 function findMatches(user, providers) {
-    let matches = new Object();
-    let invalids = [];
-    
-    //Not a fan of this triple for loop - think of something to make more efficient
-    //Might need some input on this, currently one loop to key through elig, cat, and feat in user
-    //One loop to key through each provider in the dictionary
-    //Final loop to look through each true or false attribute
-    for (const key in user) {
-        if (key == "eligibilities") {
-            for (let i=0; i < providers.length; i++) {
-                if (eligibiiltyMatch(user[key], providers[i][key])) {
-                    matches[providers[i]["name"]] = user[key];
-                } else {
-                    invalids.push(providers[i]["name"])
-                }
-            }
-        }
-        if (key == "features" || key == "categories") {
-            for (let i=0; i < providers.length; i++) {
-                if (!invalids.includes(providers[i]["name"])) {
-                    const providerName = providers[i]["name"];
-                    const match = features_and_categories_match(user[key], providers[i][key]);
+    let matches = {};
 
-                    if (matches[providerName]) {
-                        matches[providerName] = { ...matches[providerName], ...match };
-                    } else {
-                        matches[providerName] = match;
-                    }
-                }
-            }
+    // Initialize matches with each provider having nested dictionaries
+    providers.forEach(provider => {
+        matches[provider.name] = {
+            eligibilities: {},
+            categories: {},
+            features: {}
+        };
+    });
+
+    let invalids = [];
+
+    // Iterate through each provider
+    providers.forEach(provider => {
+        const providerName = provider.name;
+
+        // Check eligibilities
+        if (eligibiiltyMatch(user.eligibilities, provider.eligibilities)) {
+            matches[providerName].eligibilities = user.eligibilities;
+        } else {
+            invalids.push(providerName);
         }
-    }   
+
+        // Check features and categories if the provider is not invalid
+        if (!invalids.includes(providerName)) {
+            matches[providerName].features = features_and_categories_match(user.features, provider.features);
+            matches[providerName].categories = features_and_categories_match(user.categories, provider.categories);
+        }
+    });
+
+    for (const providerName in matches) {
+        if (Object.keys(matches[providerName].eligibilities).length === 0) {
+            delete matches[providerName];
+        }
+    }
+
     return matches;
 }
 
@@ -57,6 +62,27 @@ function features_and_categories_match(user_f_or_c, provider_f_or_c) {
 
     return matches;
 }
+
+//Takes in matches and sorts by features - most are first, RETURNS ARRAY
+function feature_sort(matches) {
+    let order = [];
+    const temp_matches = {...matches};
+    while (Object.keys(temp_matches).length > 0) {
+        let name = "";
+        let max = 0;
+        for (const key in temp_matches) {
+            if (max < Object.keys(temp_matches[key].features).length) {
+                max = Object.keys(temp_matches[key].features).length;
+                name = key;
+            }
+        }
+        order.push(name);
+        delete temp_matches[name];
+    }
+
+    return order;
+}
+
 
 //For local alg testing
 function main() {
@@ -176,7 +202,7 @@ function main() {
 
         },
         { 
-            //Features Difference: In Custody, Formerly, Voluntary
+            //Features Difference: In Custody, Formerly
             //Categories Difference: First Steps, Financial, Education, Friends and Family
             name: "Provider 4", 
             eligibilities: {
@@ -191,7 +217,7 @@ function main() {
                 "Local Hiring and Fair Minimum": false,
                 "Formerly Incarcerated Leadership": false,
                 "Youth Programs Available": true,
-                "Voluntary": false,
+                "Voluntary": true,
                 "In Custody Review": true,
             },
             categories: {
@@ -208,6 +234,7 @@ function main() {
 
     const matches = findMatches(test_user_1, providers);
     console.log(matches);
+    console.log(feature_sort(matches));
 }
 
 main();
