@@ -1,44 +1,51 @@
-const db = require('./firebase'); // Import the initialized Firestore instance
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { collection, getDocs } from 'firebase/firestore';
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCHVRpE8hGurx73rfAlCQV5e_TRPwXnTlk",
+  authDomain: "diginifi.firebaseapp.com",
+  databaseURL: "https://diginifi-default-rtdb.firebaseio.com",
+  projectId: "diginifi",
+  storageBucket: "diginifi.appspot.com",
+  messagingSenderId: "808749677810",
+  appId: "1:808749677810:web:fd12c2c2253b8d2645246b",
+  measurementId: "G-L19X4ZMTBG"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 async function getProviders() {
   try {
-    const providersSnapshot = await db.collection('providers').get();
-    const providers = [];
-    providersSnapshot.forEach(doc => {
-      providers.push({ id: doc.id, ...doc.data() });
-    });
+    const providersSnapshot = await getDocs(collection(db, 'providers')); // Fetch the entire collection
+    const providers = providersSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })); // Map over documents to construct the array
     return providers;
   } catch (error) {
     console.error('Error retrieving providers:', error);
-    throw error;
+    throw error; // Throw error for caller to handle
   }
 }
 
 async function getUser(userId) {
   try {
-    const userDoc = await db.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
+    const userDocRef = doc(db, 'users', userId); // Reference the document
+    const userDoc = await getDoc(userDocRef); // Fetch the document
+    if (!userDoc.exists()) {
       throw new Error('User not found');
     }
-    return { id: userDoc.id, ...userDoc.data() };
+    return { id: userDoc.id, ...userDoc.data() }; // Return user data
   } catch (error) {
     console.error('Error retrieving user:', error);
-    throw error;
+    throw error; // Throw error for caller to handle
   }
 }
-
-(async () => {
-  try {
-    //Link this to an input on the front end!
-    const userId = '';
-    const user = await getUser(userId);
-    const providers = await getProviders();
-    const matches = findMatches(user, providers);
-    feature_sort(matches);
-  } catch (error) {
-    console.error('Error:', error);
-  }
-})();
 
 //Finds matches by accepting two dictionary objects for user and provider attributes
 function findMatches(user, providers) {
