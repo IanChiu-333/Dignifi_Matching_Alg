@@ -39,7 +39,10 @@ async function getProviders() {
         providerN.features = features;
       }
       if (service !== undefined) {
-        providerN.service = service;
+        providerN.service = {};
+        service.forEach(serviceItem => {
+          providerN.service[serviceItem.title] = serviceItem.subCategories;
+        });
       }
       providerList.push(providerN);
 
