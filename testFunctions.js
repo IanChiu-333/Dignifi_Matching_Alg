@@ -71,14 +71,13 @@ async function getUser(userId) {
 (async () => {
     try {
       console.log('Fetching providers...');
-        const providers = await getProviders();
-        console.log('Providers:', providers);
+      const providers = await getProviders();
+      console.log('Providers:', providers[0]);
+      let user_id = "1xGvB6ZI4ITYAzGNgAGjtVG0nPM2"
+      console.log('Fetching user...');
+      const user = await getUser(user_id);
+      console.log('User:', user)
       } catch (error) {
         console.error('Test failed:', error);
       }
-  
-      // console.log('Fetching user...');
-      // const userId = '1BLE1Jco1lSmQXwtCGbuaTWOY2H3'; // Replace with an actual user ID
-      // const user = await getUser(userId);
-      // console.log('User:', user);
   })();
