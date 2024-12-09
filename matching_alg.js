@@ -88,12 +88,9 @@ function findMatches(user, providers) {
 }
 
 //Finds matching eligibilities - only returns exact matches BOOLEAN
-function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
+function userEligibilitiesMatch(userEligibilities, provider) {
     let isValid = true;
-    const today = new Date();
-    const dateOfBirth = user.onboardingInfo.personalInfo.dateOfBirth.toDate();
-    const latestReleaseDate = user.onboardingInfo.incarcerationInfo.latestOffenceType.latestReleaseDate.toDate();
-
+    providerEligibilities = provider.providerOnboardingInfo.generalService.eligibilityCriteria;
     for (const key in providerEligibilities) {
         //E2 - 30 Days Clean and Sober
         if (providerEligibilities[key] === "30 Days Clean and Sober") {
@@ -104,6 +101,7 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
         //E3 - Adults Only (18+)
         if (providerEligibilities[key] === "Adults Only (18+)") {
             const today = new Date();
+            const dateOfBirth = userEligibilities.onboardingInfo.personalInfo.dateOfBirth.toDate();
             const difference = Math.abs(today - dateOfBirth) / (1000 * 60 * 60 * 24)
             if (difference > 6570) {
                 isValid = true;
@@ -111,13 +109,14 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
                 isValid = false;
             }
         }
-        //E4 - Completed a Recovery Program
+        //E4 - Completed a Recovery Program - WIP
         if (providerEligibilities[key] === "Completed a Recovery Program") {
-            if (userEligibilities["Programs Accessed"]["is_recovery"] === true) {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            // if (userEligibilities["Programs Accessed"]["is_recovery"] === true) {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
         //E5 - Current Custody with Plans for Reentry
         if (providerEligibilities[key] === "Current Custody with Plans for Reentry") {
@@ -125,17 +124,19 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
             //Logic Needs to be replaced
             console.log("Currently no data available to check");
         }
-        //E6 - Completed a Recovery Program
+        //E6 - Completed a Recovery Program - WIP
         if (providerEligibilities[key] === "Completed a Recovery Program") {
-            if (userEligibilities["Programs Accessed"]["ongoing_participation"] === true) {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            // if (userEligibilities["Programs Accessed"]["ongoing_participation"] === true) {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
         //E7 - Currently Living in Transitional Housing
         if (providerEligibilities[key] === "Currently Living in Transitional Housing") {
-            if (userEligibilities.onboardingInfo.currentNeedsInfo.aspiringCareerTrack.CurrentHousingStatus === "Transitional Housing") {
+            const currentHousingStatus = userEligibilities.onboardingInfo.currentNeedsInfo.currentHousingStatus;
+            if (currentHousingStatus === "Transitional Housing") {
                 isValid = true;
             } else {
                 isValid = false;
@@ -149,6 +150,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
         }
         //E9 - Elderly
         if (providerEligibilities[key] === "Elderly") {
+            const today = new Date();
+            const dateOfBirth = userEligibilities.onboardingInfo.personalInfo.dateOfBirth.toDate();
             if (today - dateOfBirth > 23725) {
                 isValid = true;
             } else {
@@ -163,6 +166,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
         }
         //E11 - First 90 Days of Reentry
         if (providerEligibilities[key] === "First 90 Days of Reentry") {
+            const today = new Date();
+            const latestReleaseDate = userEligibilities.onboardingInfo.incarcerationInfo.latestReleaseDate.toDate();
             const difference = Math.abs(today - latestReleaseDate) / (1000 * 60 * 60 * 24);
             if (difference < 90) {
                 isValid = true;
@@ -172,7 +177,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
         }
         //E12 - First Time Offenders
         if (providerEligibilities[key] === "First Time Offenders") {
-            if (providerEligibilities.onboardingInfo.incarcerationInfo.numberOfTimesIncarcerated === 1) {
+            const numberOfTimesIncarcerated = userEligibilities.onboardingInfo.incarcerationInfo.numberOfTimesIncarcerated;
+            if (numberOfTimesIncaracerated === 1) {
                 isValid = true;
             } else {
                 isValid = false;
@@ -180,7 +186,11 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
         }
         //E13 - Geographic Residency
         if (providerEligibilities[key] === "Geographic Residency") {
-            if (providerEligibilities["Geographic Residency"] === userEligibilities["Geographic Residency"]) {
+            const userCity = userEligibilities.onboardingInfo.personalInfo.city;
+            const userState = userEligibilities.onboardingInfo.personalInfo.state;
+            const providerCity = provider.providerOnboardingInfo.providerDetails.city;
+            const providerState = provider.providerOnboardingInfo.providerDetails.state;
+            if (userCity === providerCity || userState === providerState) {
                 isValid = true;
             } else {    
                 isValid = false;
@@ -188,7 +198,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
         }
         //E14 - Homeless or At-Risk of Homelessness
         if (providerEligibilities[key] === "Homeless or At-Risk of Homelessness") {
-            if (userEligibilities["Current Housing Status"] === "Houseing Insecure") {
+            const currentHousingStatus = userEligibilities.onboardingInfo.currentNeedsInfo.currentHousingStatus;
+            if (currentHousingStatus === "Houseing Insecure") {
                 isValid = true;
             } else {
                 isValid = false;
@@ -206,13 +217,14 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
             //Logic Needs to be replaced
             console.log("Currently no data available to check");
         }
-        //E17 - Individuals Enrolled in Workforce Training Programs
+        //E17 - Individuals Enrolled in Workforce Training Programs - WIP
         if (providerEligibilities[key] === "Individuals Enrolled in Workforce Training Programs") {
-            if (userEligibilities["Programs Accessed"]["workforce_training"] === true) {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            // if (userEligibilities["Programs Accessed"]["workforce_training"] === true) {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
         //E18 - Individuals Receiving Food Stamps or Government Assistance
         if (providerEligibilities[key] === "Individuals Receiving Food Stamps or Government Assistance") {
@@ -233,13 +245,14 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
             console.log("Currently no data available to check");
         }
 
-        // E21 - Individuals on Parole or Probation
+        // E21 - Individuals on Parole or Probation - WIP; No data field for current custody status
         if (providerEligibilities[key] === "Individuals on Parole or Probation") {
-            if (userEligibilities["Current Custody Status"] === "Parole" || userEligibilities["Current Custody Status"] === "Probation") {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            // if (userEligibilities["Current Custody Status"] === "Parole" || userEligibilities["Current Custody Status"] === "Probation") {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
 
         // E22 - Individuals with HIV/AIDS or Other Chronic Illnesses
@@ -263,40 +276,45 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
             console.log("Currently no data available to check");
         }
 
-        // E25 - Individuals with Substance Use History
+        // E25 - Individuals with Substance Use History - WIP
         if (providerEligibilities[key] === "Individuals with Substance Use History") { 
-            if (userEligibilities["Programs Accessed"]["substance_use_recovery"] === true) {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            // if (userEligibilities["Programs Accessed"]["substance_use_recovery"] === true) {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
 
         // E26 - Individuals with a GED or Equivalent Education
         if (providerEligibilities[key] === "Individuals with a GED or Equivalent Education") { 
-            if (userEligibilities["Education Level"] === "GED") {
+            const educationLevel = userEligibilities.onboardingInfo.currentNeedsInfo.highestLevelOfEducation;
+            if (educationLevel === "GED") {
                 isValid = true;
             } else {
                 isValid = false;
             }
         }
 
-        // E27 - Justice Impact People in Alameda County
+        // E27 - Justice Impact People in Alameda County - WIP; No field for county
         if (providerEligibilities[key] === "Justice Impact People in Alameda County") { 
-            if (userEligibilities["Location"] === "Alameda County") {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            
+            // if (userEligibilities["Location"] === "Alameda County") {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
 
-        // E28 - LGBTQ+ Identifying Individuals
+        // E28 - LGBTQ+ Identifying Individuals - WIP; No field for identity
         if (providerEligibilities[key] === "LGBTQ+ Identifying Individuals") { 
-            if (userEligibilities["Identify"] === true) {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            // if (userEligibilities["Identify"] === true) {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
 
         // E29 - Location - Same as 13?
@@ -313,7 +331,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E31 - Members of Racial/Ethnic Minority Groups
         if (providerEligibilities[key] === "Members of Racial/Ethnic Minority Groups") {
-            if (userEligibilities["Ethnicity"] !== "white") {
+            const ethnicity = userEligibilities.onboardingInfo.personalInfo.ethnicity;
+            if (ethnicity !== "white") {
                 isValid = true;
             } else {
                 isValid = false;
@@ -322,7 +341,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E32 - Men Only
         if (providerEligibilities[key] === "Men Only") {
-            if (userEligibilities["Gender"] === "Male") {
+            const gender = userEligibilities.onboardingInfo.personalInfo.gender;
+            if (gender === "Male") {
                 isValid = true;
             } else {
                 isValid = false;
@@ -338,25 +358,28 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E34 - Must Be Employed or Actively Job Seeking
         if (providerEligibilities[key] === "Must Be Employed or Actively Job Seeking") {
-            if (userEligibilities["Employment Status"] === "Currently Employed" || userEligibilities["Employment Status"] === "Career Desire") {
+            const employmentStatus = userEligibilities.onboardingInfo.currentNeedsInfo.currentEmploymentStatus;
+            if (employmentStatus === "Currently Employed" || employmentStatus === "Career Desire") {
                 isValid = true;
             } else {
                 isValid = false; 
             }
         }
 
-        // E35 - Must Be Enrolled in or Completed Educational Program
+        // E35 - Must Be Enrolled in or Completed Educational Program - WIP
         if (providerEligibilities[key] === "Must Be Enrolled in or Completed Educational Program") {
-            if (userEligibilities["Programs Accessed"]["education"] === true || userEligibilities["Education Level"] !== "None") {
-                isValid = true;
-            } else {
-                isValid = false;
-            } 
+            // if (userEligibilities["Programs Accessed"]["education"] === true || userEligibilities["Education Level"] !== "None") {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true; 
         }
 
         // E36 - Must Be Formerly Incarcerated
         if (providerEligibilities[key] === "Must Be Formerly Incarcerated") {
-            if (userEligibilities["Number of Times Incarcerated"] > 0) {
+            const numberOfTimesIncarcerated = userEligibilities.onboardingInfo.incarcerationInfo.numberOfTimesIncarcerated;
+            if (numberOfTimesIncarcerated > 0) {
                 isValid = true;
             } else {
                 isValid = false;
@@ -386,7 +409,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E40 - Must be homeless
         if (providerEligibilities[key] === "Must be homeless") {
-            if (userEligibilities["Current Housing Status"] === "Housing Insecure") {
+            const currentHousingStatus = userEligibilities.onboardingInfo.currentNeedsInfo.currentHousingStatus;
+            if (currentHousingStatus === "Housing Insecure") {
                 isValid = true;
             } else {
                 isValid = false;
@@ -395,7 +419,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E41 - No History of Violent Crimes
         if (providerEligibilities[key] === "No History of Violent Crimes") {
-            if (!userEligibilities["Type of Offense"].includes("Violent")) {
+            const offenceType = userEligibilities.onboardingInfo.incarcerationInfo.latestOffenceType;
+            if (!offenceType.includes("Violent")) {
                 isValid = true;
             } else {
                 isValid = false;
@@ -404,7 +429,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E42 - No Registered Sex Offenders; // E43 - No Sexual Criminal Convictions; // E44 - No Sexual Offenses or Registered Sex Offenders
         if (providerEligibilities[key] === "No Registered Sex Offenders" || providerEligibilities[key] === "No Sexual Criminal Convictions" || providerEligibilities[key] === "No Sexual Offenses or Registered Sex Offenders") {
-            if (!userEligibilities["Type of Offense"].includes("Sexual")) {
+            const offenceType = userEligibilities.onboardingInfo.incarcerationInfo.latestOffenceType;
+            if (!offenceType.includes("Sexual")) {
                 isValid = true;
             } else {
                 isValid = false;
@@ -418,13 +444,14 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
             console.log("Currently no data available to check");
         }
 
-        // E46 - Programs Accessed
+        // E46 - Programs Accessed - WIP
         if (providerEligibilities[key] === "Programs Accessed") {
-            if (userEligibilities["Programs Accessed"].length !== 0) {
-                isValid = true;
-            } else {
-                isValid = false;
-            } 
+            // if (userEligibilities["Programs Accessed"].length !== 0) {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // } 
+            isValid = true;
         }
 
         // E47 - Referral Required from Housing Coordinator
@@ -450,21 +477,23 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E50 - Senior Citizens (60+)
         if (providerEligibilities[key] === "Senior Citizens (60+)") {
-            if (today - birthday > 23725) {
+            const today = new Date();
+            const dateOfBirth = userEligibilities.onboardingInfo.personalInfo.dateOfBirth.toDate();
+            if (today - dateOfBirth > 23725) {
                 isValid = true;
             } else {
                 isValid = false;
             }
         }
 
-        // E51 - Specific Criminal Convictions Allowed/Disallowed (e.g., financial crimes)
+        // E51 - Specific Criminal Convictions Allowed/Disallowed (e.g., financial crimes) - WIP data not logged
         if (providerEligibilities[key] === "Specific Criminal Convictions Allowed/Disallowed") {
-            if (!providerEligibilities["Specific Criminal Convictions Disallowed"].includes(userEligibilities["Type of Offense"])) {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
-
+            // if (!providerEligibilities["Specific Criminal Convictions Disallowed"].includes(userEligibilities["Type of Offense"])) {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
 
         // E52 - Survivors of Domestic Violence
@@ -490,7 +519,8 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E55 - Veterans Only
         if (providerEligibilities[key] === "Veterans Only") {
-            if (userEligibilities["Military Status"] === true) {
+            const veteran = userEligibilities.onboardingInfo.personalInfo.veteranStatus;
+            if (veteran === "Yes") {
                 isValid = true;
             } else {
                 isValid = false; 
@@ -499,7 +529,9 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E56 - Within 1 Year of Incarceration
         if (providerEligibilities[key] === "Within 1 Year of Incarceration") {
-            const difference = Math.abs(today - userEligibilities["latestReleaseDate"]) / (1000 * 60 * 60 * 24);
+            const today = new Date();
+            const latestReleaseDate = userEligibilities.onboardingInfo.incarcerationInfo.latestReleaseDate.toDate();
+            const difference = Math.abs(today - latestReleaseDate) / (1000 * 60 * 60 * 24);
             if (difference < 365) {
                 isValid = true;
             } else {
@@ -509,7 +541,9 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E57 - Within 3 Years of Incarceration
         if (providerEligibilities[key] === "Within 3 Years of Incarceration") {
-            const difference = Math.abs(today - userEligibilities["latestReleaseDate"]) / (1000 * 60 * 60 * 24);
+            const today = new Date();
+            const latestReleaseDate = userEligibilities.onboardingInfo.incarcerationInfo.latestReleaseDate.toDate();
+            const difference = Math.abs(today - latestReleaseDate) / (1000 * 60 * 60 * 24);
             if (difference < 1095) {
                 isValid = true;
             } else {
@@ -519,7 +553,9 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E58 - Within 5 Years of Incarceration
         if (providerEligibilities[key] === "Within 5 Years of Incarceration") {
-            const difference = Math.abs(today - userEligibilities["latestReleaseDate"]) / (1000 * 60 * 60 * 24);
+            const today = new Date();
+            const latestReleaseDate = userEligibilities.onboardingInfo.incarcerationInfo.latestReleaseDate.toDate();
+            const difference = Math.abs(today - latestReleaseDate) / (1000 * 60 * 60 * 24);
             if (difference < 1825) {
                 isValid = true;
             } else {
@@ -529,7 +565,9 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E59 - Within 6 Months of Incarceration
         if (providerEligibilities[key] === "Within 6 Months of Incarceration") {
-            const difference = Math.abs(today - userEligibilities["latestReleaseDate"]) / (1000 * 60 * 60 * 24);
+            const today = new Date();
+            const latestReleaseDate = userEligibilities.onboardingInfo.incarcerationInfo.latestReleaseDate.toDate();
+            const difference = Math.abs(today - latestReleaseDate) / (1000 * 60 * 60 * 24);
             if (difference < 180) {
                 isValid = true;
             } else {
@@ -537,19 +575,23 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
             } 
         }
 
-        // E60 - Within 6 months of release to Alameda County
+        // E60 - Within 6 months of release to Alameda County - WIP, no field for county
         if (providerEligibilities[key] === "Within 6 months of release to Alameda County") { 
-            const difference = Math.abs(today - userEligibilities["latestReleaseDate"]) / (1000 * 60 * 60 * 24);
-            if (difference < 180 && userEligibilities["Location"] === "Alameda County") {
-                isValid = true;
-            } else {
-                isValid = false;
-            }
+            // const today = new Date();
+            // const latestReleaseDate = userEligibilities.onboardingInfo.incarcerationInfo.latestReleaseDate.toDate();
+            // const difference = Math.abs(today - latestReleaseDate) / (1000 * 60 * 60 * 24);
+            // if (difference < 180 && userEligibilities["Location"] === "Alameda County") {
+            //     isValid = true;
+            // } else {
+            //     isValid = false;
+            // }
+            isValid = true;
         }
 
         // E61 - Women Only
         if (providerEligibilities[key] === "Women Only") {
-            if (userEligibilities["Gender"] === "Female") {
+            const gender = userEligibilities.onboardingInfo.personalInfo.gender;
+            if (gender === "Female") {
                 isValid = true;
             } else {
                 isValid = false;
@@ -558,7 +600,9 @@ function userEligibilitiesMatch(userEligibilities, providerEligibilities) {
 
         // E62 - Youth Only (12-17)
         if (providerEligibilities[key] === "Youth Only (12-17)") {
-            if (today - birthday > 4380 && today - birthday < 6570) {
+            const today = new Date();
+            const dateOfBirth = userEligibilities.onboardingInfo.personalInfo.dateOfBirth.toDate();
+            if (today - dateOfBirth > 4380 && today - dateOfBirth < 6570) {
                 isValid = true;
             } else {
                 isValid = false;

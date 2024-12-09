@@ -72,11 +72,16 @@ async function getUser(userId) {
     try {
       console.log('Fetching providers...');
       const providers = await getProviders();
-      console.log('Providers:', providers[0]);
       let user_id = "1xGvB6ZI4ITYAzGNgAGjtVG0nPM2"
       console.log('Fetching user...');
       const user = await getUser(user_id);
-      console.log('User:', user)
+      let eligiblity_match = [];
+      for (let i=0; i < providers.length; i++) {
+        if (userEligibilitiesMatch(user, providers[i])) {
+          eligiblity_match.push(providers[i].name);
+        }
+      }
+
       } catch (error) {
         console.error('Test failed:', error);
       }
